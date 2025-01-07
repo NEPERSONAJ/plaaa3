@@ -2,10 +2,11 @@
 export default {
   darkMode: ['class'],
   content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
   ],
   theme: {
     extend: {
@@ -55,6 +56,15 @@ export default {
           4: 'hsl(var(--chart-4))',
           5: 'hsl(var(--chart-5))',
         },
+        whatsapp: {
+          green: '#25D366',
+          dark: '#075E54',
+          light: '#ECE5DD',
+          teal: '#128C7E',
+        }
+      },
+      fontFamily: {
+        sans: ['Montserrat', 'sans-serif'],
       },
       keyframes: {
         'accordion-down': {
