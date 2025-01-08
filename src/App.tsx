@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, ShoppingBag, Menu, Search, X, Instagram, Send } from 'lucide-react';
+import { MessageCircle, ShoppingBag, Menu, Search, X, Instagram, Send, ChevronDown } from 'lucide-react';
 import { cn } from './lib/utils';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
@@ -8,7 +8,7 @@ import { Dialog, DialogContent } from './components/ui/dialog';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { supabase } from './lib/supabase';
 import type { Category, Product, Settings } from './lib/supabase';
-import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -20,6 +20,8 @@ function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // New state variables for scroll indicator
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
   const [hasScrolled, setHasScrolled] = useState(false);
   const dialogContentRef = useRef<HTMLDivElement>(null);
@@ -54,6 +56,13 @@ function App() {
       setLoading(false);
     }
   };
+
+  // Reset scroll indicator when opening a new product
+  useEffect(() => {
+    setCurrentImageIndex(0);
+    setShowScrollIndicator(true);
+    setHasScrolled(false);
+  }, [selectedProduct]);
 
   const handleWhatsAppClick = (product: Product) => {
     if (!settings?.whatsapp_number) return;
@@ -102,12 +111,6 @@ ${settings.site_name}
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedProduct]);
-
-  useEffect(() => {
-    setCurrentImageIndex(0);
-    setShowScrollIndicator(true);
-    setHasScrolled(false);
   }, [selectedProduct]);
 
   // Handle scroll in dialog
@@ -290,27 +293,27 @@ ${settings.site_name}
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={cn(
-                "flex-shrink-0 relative rounded-2xl overflow-hidden group transition-all duration-300 hover:scale-105",
-                "w-20 h-20 sm:w-24 sm:h-24 focus:outline-none",
-                "border border-white/20 shadow-sm hover:shadow-md",
-                selectedCategory === category.id && "ring-2 ring-whatsapp-dark ring-offset-2"
-              )}
-            >
-              <img
-                src={category.image_url}
-                alt={category.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/20 flex items-center justify-center group-hover:from-black/70 group-hover:to-black/30 transition-all duration-300">
-                <span className="text-white text-xs sm:text-sm font-medium px-2 text-center drop-shadow-md">
-                  {category.name}
-                </span>
-              </div>
-            </button>
+            <div key={category.id} className="flex flex-col items-center gap-2">
+              <button
+                onClick={() => setSelectedCategory(category.id)}
+                className={cn(
+                  "flex-shrink-0 relative rounded-2xl overflow-hidden group transition-all duration-300 hover:scale-105",
+                  "w-20 h-20 sm:w-24 sm:h-24 focus:outline-none",
+                  "border border-white/20 shadow-sm hover:shadow-md",
+                  selectedCategory === category.id && "ring-2 ring-whatsapp-dark ring-offset-2"
+                )}
+              >
+                <img
+                  src={category.image_url}
+                  alt={category.name}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+              {/* Category name below the image */}
+              <span className="text-xs sm:text-sm font-semibold text-center px-1">
+                {category.name}
+              </span>
+            </div>
           ))}
         </div>
       </div>
@@ -363,7 +366,7 @@ ${settings.site_name}
       {selectedProduct && (
         <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
           <DialogContent className="max-w-4xl p-0 bg-white max-h-[90vh] overflow-hidden">
-            <div className="grid md:grid-cols-2 h-[90vh]">
+            <div className="grid md:grid-cols-2 h-[90vh] md:h-auto">
               {/* Image Gallery */}
               <div className="relative">
                 <div className="relative aspect-square">
