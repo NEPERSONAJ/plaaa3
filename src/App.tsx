@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, ShoppingBag, Menu, Search, X, Instagram, Send } from 'lucide-react';
 import { cn } from './lib/utils';
 import { Button } from './components/ui/button';
@@ -8,8 +8,7 @@ import { Dialog, DialogContent } from './components/ui/dialog';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { supabase } from './lib/supabase';
 import type { Category, Product, Settings } from './lib/supabase';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Separator } from './components/ui/separator';
+import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -21,6 +20,10 @@ function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const dialogContentRef = useRef<HTMLDivElement>(null);
+  const categoriesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchData();
@@ -29,20 +32,17 @@ function App() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch categories
       const { data: categoriesData } = await supabase
         .from('categories')
         .select('*')
         .order('display_order');
       if (categoriesData) setCategories(categoriesData);
 
-      // Fetch products
       const { data: productsData } = await supabase
         .from('products')
         .select('*');
       if (productsData) setProducts(productsData);
 
-      // Fetch settings
       const { data: settingsData } = await supabase
         .from('settings')
         .select('*')
@@ -58,12 +58,25 @@ function App() {
   const handleWhatsAppClick = (product: Product) => {
     if (!settings?.whatsapp_number) return;
     
+    const category = categories.find(c => c.id === product.category_id);
+    const specifications = Object.entries(product.specifications || {})
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+    
     const message = `
-Здравствуйте! Интересует товар:
-${product.name}
-Цена: ${product.price.toLocaleString('ru-RU')} ₽
-${product.description || ''}
+🛍️ *Здравствуйте! Интересует товар:*
+
+📦 *${product.name}*
+${category ? `📑 Категория: ${category.name}` : ''}
+💰 Цена: ${product.price.toLocaleString('ru-RU')} ₽
+
+${product.description ? `📝 *Описание:*\n${product.description}\n` : ''}
+${specifications ? `🔍 *Характеристики:*\n${specifications}\n` : ''}
+🖼️ Фото товара: ${product.images[0]}
+
+${settings.site_name}
     `.trim();
+
     window.open(`https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -93,7 +106,31 @@ ${product.description || ''}
 
   useEffect(() => {
     setCurrentImageIndex(0);
+    setShowScrollIndicator(true);
+    setHasScrolled(false);
   }, [selectedProduct]);
+
+  // Handle scroll in dialog
+  const handleDialogScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop } = e.currentTarget;
+    if (!hasScrolled && scrollTop > 50) {
+      setHasScrolled(true);
+    }
+    if (scrollTop > 100) {
+      setShowScrollIndicator(false);
+    }
+  };
+
+  // Handle horizontal scroll for categories
+  const handleCategoryScroll = (direction: 'left' | 'right') => {
+    if (!categoriesRef.current) return;
+    const scrollAmount = 300;
+    const scrollLeft = categoriesRef.current.scrollLeft;
+    categoriesRef.current.scrollTo({
+      left: direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
+      behavior: 'smooth'
+    });
+  };
 
   const filteredProducts = products.filter(product => 
     (!selectedCategory || product.category_id === selectedCategory) &&
@@ -230,8 +267,28 @@ ${product.description || ''}
       )}
 
       {/* Categories */}
-      <ScrollArea className="bg-white/80 backdrop-blur-sm p-4 shadow-sm">
-        <div className="flex gap-4 pb-2">
+      <div className="relative bg-white/80 backdrop-blur-sm p-4 shadow-sm">
+        {categories.length > 4 && (
+          <>
+            <button
+              onClick={() => handleCategoryScroll('left')}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-white/80 rounded-full shadow-md hover:bg-white transition-all"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <button
+              onClick={() => handleCategoryScroll('right')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-white/80 rounded-full shadow-md hover:bg-white transition-all"
+            >
+              <ChevronRight className="w-5 h-5 text-gray-600" />
+            </button>
+          </>
+        )}
+        <div 
+          ref={categoriesRef}
+          className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide scroll-smooth"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {categories.map((category) => (
             <button
               key={category.id}
@@ -256,7 +313,7 @@ ${product.description || ''}
             </button>
           ))}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Products Grid */}
       <div className="container mx-auto px-4 py-6">
@@ -306,7 +363,7 @@ ${product.description || ''}
       {selectedProduct && (
         <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
           <DialogContent className="max-w-4xl p-0 bg-white max-h-[90vh] overflow-hidden">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 h-[90vh]">
               {/* Image Gallery */}
               <div className="relative">
                 <div className="relative aspect-square">
@@ -357,8 +414,12 @@ ${product.description || ''}
                 )}
               </div>
               {/* Product Info */}
-              <div className="p-6">
-                <ScrollArea className="h-[calc(90vh-8rem)]">
+              <div className="relative h-full">
+                <ScrollArea 
+                  className="h-full px-6 py-4"
+                  onScroll={handleDialogScroll}
+                  ref={dialogContentRef}
+                >
                   <h2 className="text-2xl font-bold mb-4">{selectedProduct.name}</h2>
                   <p className="text-xl font-bold text-whatsapp-dark mb-4">
                     {selectedProduct.price.toLocaleString('ru-RU')} ₽
@@ -387,6 +448,15 @@ ${product.description || ''}
                     Заказать через WhatsApp
                   </Button>
                 </ScrollArea>
+                {/* Scroll Indicator */}
+                {showScrollIndicator && !hasScrolled && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 animate-bounce">
+                    <div className="flex flex-col items-center text-gray-500">
+                      <ChevronDown className="w-6 h-6" />
+                      <span className="text-xs">Листайте вниз</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </DialogContent>
