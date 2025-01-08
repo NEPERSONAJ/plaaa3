@@ -7,6 +7,7 @@ import { ScrollArea } from './components/ui/scroll-area';
 import { Dialog, DialogContent } from './components/ui/dialog';
 import { supabase } from './lib/supabase';
 import type { Category, Product, Settings } from './lib/supabase';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -16,6 +17,8 @@ function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isImageFullscreen, setIsImageFullscreen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -66,6 +69,35 @@ function App() {
     `.trim();
     window.open(`https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent(message)}`, '_blank');
   };
+
+  const handleNextImage = () => {
+    if (!selectedProduct) return;
+    setCurrentImageIndex((prev) => 
+      prev === selectedProduct.images.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const handlePrevImage = () => {
+    if (!selectedProduct) return;
+    setCurrentImageIndex((prev) => 
+      prev === 0 ? selectedProduct.images.length - 1 : prev - 1
+    );
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') handlePrevImage();
+    if (e.key === 'ArrowRight') handleNextImage();
+    if (e.key === 'Escape') setIsImageFullscreen(false);
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedProduct]);
+
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [selectedProduct]);
 
   if (loading) {
     return (
@@ -177,16 +209,90 @@ function App() {
 
       {/* Product Dialog */}
       {selectedProduct && (
-        <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-          <DialogContent className="max-w-4xl p-0">
+        <Dialog open={!!selectedProduct} onOpenChange={() => {
+          setSelectedProduct(null);
+          setIsImageFullscreen(false);
+        }}>
+          <DialogContent className="max-w-4xl p-0 bg-white">
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="relative aspect-square">
-                <img
-                  src={selectedProduct.images[0]}
-                  alt={selectedProduct.name}
-                  className="w-full h-full object-cover"
-                />
+              {/* Image Gallery */}
+              <div className="relative">
+                <div 
+                  className={cn(
+                    "relative cursor-pointer transition-all duration-300",
+                    isImageFullscreen ? "fixed inset-0 z-50 bg-black flex items-center justify-center" : "aspect-square"
+                  )}
+                  onClick={() => !isImageFullscreen && setIsImageFullscreen(true)}
+                >
+                  {isImageFullscreen && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsImageFullscreen(false);
+                      }}
+                      className="absolute top-4 right-4 z-50 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                  )}
+                  <img
+                    src={selectedProduct.images[currentImageIndex]}
+                    alt={selectedProduct.name}
+                    className={cn(
+                      "transition-all duration-300",
+                      isImageFullscreen 
+                        ? "max-h-screen max-w-full w-auto h-auto object-contain"
+                        : "w-full h-full object-cover"
+                    )}
+                  />
+                  {selectedProduct.images.length > 1 && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePrevImage();
+                        }}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNextImage();
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                    </>
+                  )}
+                </div>
+                {/* Thumbnails */}
+                {selectedProduct.images.length > 1 && !isImageFullscreen && (
+                  <div className="flex gap-2 mt-2 px-2">
+                    {selectedProduct.images.map((image, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={cn(
+                          "relative w-16 h-16 rounded-lg overflow-hidden transition-all duration-300",
+                          currentImageIndex === index 
+                            ? "ring-2 ring-whatsapp-dark ring-offset-2"
+                            : "opacity-50 hover:opacity-100"
+                        )}
+                      >
+                        <img
+                          src={image}
+                          alt={`${selectedProduct.name} - фото ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+              {/* Product Info */}
               <div className="p-6">
                 <h2 className="text-2xl font-bold mb-4">{selectedProduct.name}</h2>
                 <p className="text-xl font-bold text-whatsapp-dark mb-4">
