@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, ShoppingBag, Menu, Search } from 'lucide-react';
+import { MessageCircle, ShoppingBag, Menu, Search, X } from 'lucide-react';
 import { cn } from './lib/utils';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { ScrollArea } from './components/ui/scroll-area';
 import { Dialog, DialogContent } from './components/ui/dialog';
+import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { supabase } from './lib/supabase';
 import type { Category, Product, Settings } from './lib/supabase';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -112,27 +114,90 @@ function App() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-whatsapp-dark text-white p-4 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
-          <Menu className="w-6 h-6" />
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-whatsapp-teal">
+                <Menu className="w-6 h-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[300px] bg-white">
+              <nav className="flex flex-col gap-2 mt-6">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-lg"
+                  onClick={() => {
+                    setSelectedCategory(null);
+                    setSearchQuery('');
+                  }}
+                >
+                  🏠 Главная
+                </Button>
+                {categories.map((category) => (
+                  <Button
+                    key={category.id}
+                    variant="ghost"
+                    className="w-full justify-start text-lg"
+                    onClick={() => {
+                      setSelectedCategory(category.id);
+                      setSearchQuery('');
+                    }}
+                  >
+                    📦 {category.name}
+                  </Button>
+                ))}
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-lg"
+                  onClick={() => setShowSearch(!showSearch)}
+                >
+                  🔍 Поиск
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-lg"
+                  onClick={() => window.open(`https://wa.me/${settings?.whatsapp_number}`, '_blank')}
+                >
+                  💬 Связаться с нами
+                </Button>
+              </nav>
+            </SheetContent>
+          </Sheet>
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-6 h-6" />
             <h1 className="text-xl font-bold">{settings?.site_name || 'БутикЧат'}</h1>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Search className="w-6 h-6" />
-          <MessageCircle className="w-6 h-6" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-whatsapp-teal"
+            onClick={() => setShowSearch(!showSearch)}
+          >
+            {showSearch ? <X className="w-6 h-6" /> : <Search className="w-6 h-6" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-whatsapp-teal"
+            onClick={() => window.open(`https://wa.me/${settings?.whatsapp_number}`, '_blank')}
+          >
+            <MessageCircle className="w-6 h-6" />
+          </Button>
         </div>
       </header>
 
       {/* Search Bar */}
-      <div className="sticky top-16 z-40 bg-whatsapp-light p-4">
-        <Input
-          className="bg-white rounded-full px-6"
-          placeholder="Поиск товаров..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
+      {showSearch && (
+        <div className="sticky top-16 z-40 bg-whatsapp-light p-4">
+          <Input
+            className="bg-white rounded-full px-6"
+            placeholder="Поиск товаров..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      )}
 
       {/* Categories */}
       <ScrollArea className="bg-white/80 backdrop-blur-sm p-4 shadow-sm">
@@ -213,7 +278,7 @@ function App() {
           setSelectedProduct(null);
           setIsImageFullscreen(false);
         }}>
-          <DialogContent className="max-w-4xl p-0 bg-white">
+          <DialogContent className="max-w-4xl p-0 bg-white max-h-[90vh] overflow-y-auto">
             <div className="grid md:grid-cols-2 gap-4">
               {/* Image Gallery */}
               <div className="relative">
@@ -270,7 +335,7 @@ function App() {
                 </div>
                 {/* Thumbnails */}
                 {selectedProduct.images.length > 1 && !isImageFullscreen && (
-                  <div className="flex gap-2 mt-2 px-2">
+                  <div className="flex gap-2 mt-2 px-2 overflow-x-auto">
                     {selectedProduct.images.map((image, index) => (
                       <button
                         key={index}
@@ -294,33 +359,35 @@ function App() {
               </div>
               {/* Product Info */}
               <div className="p-6">
-                <h2 className="text-2xl font-bold mb-4">{selectedProduct.name}</h2>
-                <p className="text-xl font-bold text-whatsapp-dark mb-4">
-                  {selectedProduct.price.toLocaleString('ru-RU')} ₽
-                </p>
-                <p className="text-gray-600 mb-6">{selectedProduct.description}</p>
-                
-                {Object.entries(selectedProduct.specifications || {}).length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="font-semibold mb-2">Характеристики:</h3>
-                    <dl className="grid grid-cols-2 gap-2">
-                      {Object.entries(selectedProduct.specifications).map(([key, value]) => (
-                        <React.Fragment key={key}>
-                          <dt className="text-gray-600">{key}:</dt>
-                          <dd className="font-medium">{value}</dd>
-                        </React.Fragment>
-                      ))}
-                    </dl>
-                  </div>
-                )}
-                
-                <Button
-                  onClick={() => handleWhatsAppClick(selectedProduct)}
-                  className="w-full bg-whatsapp-green hover:bg-whatsapp-teal text-white py-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300"
-                >
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  Заказать через WhatsApp
-                </Button>
+                <ScrollArea className="h-[calc(90vh-8rem)]">
+                  <h2 className="text-2xl font-bold mb-4">{selectedProduct.name}</h2>
+                  <p className="text-xl font-bold text-whatsapp-dark mb-4">
+                    {selectedProduct.price.toLocaleString('ru-RU')} ₽
+                  </p>
+                  <p className="text-gray-600 mb-6">{selectedProduct.description}</p>
+                  
+                  {Object.entries(selectedProduct.specifications || {}).length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-semibold mb-2">Характеристики:</h3>
+                      <dl className="grid grid-cols-2 gap-2">
+                        {Object.entries(selectedProduct.specifications).map(([key, value]) => (
+                          <React.Fragment key={key}>
+                            <dt className="text-gray-600">{key}:</dt>
+                            <dd className="font-medium">{value}</dd>
+                          </React.Fragment>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
+                  
+                  <Button
+                    onClick={() => handleWhatsAppClick(selectedProduct)}
+                    className="w-full bg-whatsapp-green hover:bg-whatsapp-teal text-white py-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 sticky bottom-0"
+                  >
+                    <MessageCircle className="w-5 h-5 mr-2" />
+                    Заказать через WhatsApp
+                  </Button>
+                </ScrollArea>
               </div>
             </div>
           </DialogContent>
