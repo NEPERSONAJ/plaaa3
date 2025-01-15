@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Category } from '../../lib/supabase';
-import { Plus, Pencil, Trash2, X, FolderIcon, ImageIcon, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { v4 as uuidv4 } from 'uuid';
 import { uploadToImgBB } from '../../utils/imgbb';
 
-export function CategoryManager() {
-  const [categories, setCategories] = useState<Category[]>([]);
+interface CategoryManagerProps {
+  categories: Category[];
+  onUpdate: () => Promise<void>;
+}
+
+export function CategoryManager({ categories, onUpdate }: CategoryManagerProps) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [newCategory, setNewCategory] = useState({ 
@@ -69,7 +72,7 @@ export function CategoryManager() {
       
       setNewCategory({ name: '', description: '', image_url: '', display_order: 0 });
       setShowForm(false);
-      fetchCategories();
+      await onUpdate();
     } catch (error) {
       console.error('Error adding category:', error);
     }
@@ -91,7 +94,7 @@ export function CategoryManager() {
       if (error) throw error;
       
       setEditing(null);
-      fetchCategories();
+      await onUpdate();
     } catch (error) {
       console.error('Error updating category:', error);
     }
@@ -107,29 +110,11 @@ export function CategoryManager() {
       
       if (error) throw error;
       
-      fetchCategories();
+      await onUpdate();
     } catch (error) {
       console.error('Error deleting category:', error);
     }
   };
-
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      if (error) throw error;
-      setCategories(data || []);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
 
   const filteredCategories = categories.filter(
     (category) =>
