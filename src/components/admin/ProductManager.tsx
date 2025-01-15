@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Product, Category } from '../../lib/supabase';
-import { Plus, Pencil, Trash2, X, Check, Image as ImageIcon, Package, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Package, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { ScrollArea } from '../ui/scroll-area';
-import { Select } from '../ui/select';
 import { uploadToImgBB } from '../../utils/imgbb';
 
 type Specification = {
