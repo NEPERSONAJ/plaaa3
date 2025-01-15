@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, ShoppingBag, Menu, Search, X, Instagram, Send, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MessageCircle, ShoppingBag, Menu, Search, X, Instagram, Send, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from './lib/utils';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { ScrollArea } from './components/ui/scroll-area';
-import { Dialog, DialogContent } from './components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from './components/ui/dialog';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { supabase } from './lib/supabase';
 import type { Category, Product, Settings } from './lib/supabase';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -20,11 +19,6 @@ function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  
-  // New state variables for scroll indicator
-  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
-  const [hasScrolled, setHasScrolled] = useState(false);
-  const dialogContentRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,11 +51,10 @@ function App() {
     }
   };
 
-  // Reset scroll indicator when opening a new product
   useEffect(() => {
-    setCurrentImageIndex(0);
-    setShowScrollIndicator(true);
-    setHasScrolled(false);
+    if (selectedProduct) {
+      setCurrentImageIndex(0);
+    }
   }, [selectedProduct]);
 
   const handleWhatsAppClick = (product: Product) => {
@@ -113,18 +106,6 @@ ${settings.site_name}
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedProduct]);
 
-  // Handle scroll in dialog
-  const handleDialogScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop } = e.currentTarget;
-    if (!hasScrolled && scrollTop > 50) {
-      setHasScrolled(true);
-    }
-    if (scrollTop > 100) {
-      setShowScrollIndicator(false);
-    }
-  };
-
-  // Handle horizontal scroll for categories
   const handleCategoryScroll = (direction: 'left' | 'right') => {
     if (!categoriesRef.current) return;
     const scrollAmount = 300;
@@ -309,7 +290,6 @@ ${settings.site_name}
                   className="w-full h-full object-cover"
                 />
               </button>
-              {/* Category name below the image */}
               <span className="text-xs sm:text-sm font-semibold text-center px-1">
                 {category.name}
               </span>
@@ -343,10 +323,10 @@ ${settings.site_name}
                 )}
               </div>
               <div className="p-3 sm:p-4 border-t border-gray-50">
-                <h3 className="text-xs sm:text-sm font-medium mb-1.5 line-clamp-2 group-hover:text-whatsapp-dark transition-colors duration-300">
+                <h3 className="text-xs sm:text-sm font-medium mb-1.5 line-clamp-2 text-center group-hover:text-whatsapp-dark transition-colors duration-300">
                   {product.name}
                 </h3>
-                <p className="text-whatsapp-dark font-bold text-sm sm:text-base mb-3">
+                <p className="text-whatsapp-dark font-bold text-sm sm:text-base mb-3 text-center">
                   {product.price.toLocaleString('ru-RU')} ₽
                 </p>
                 <Button
@@ -362,114 +342,122 @@ ${settings.site_name}
         </div>
       </div>
 
-      {/* Product Dialog */}
       {selectedProduct && (
-        <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-          <DialogContent className="max-w-4xl p-0 bg-white max-h-[90vh] overflow-hidden">
-            <div className="grid md:grid-cols-2 h-[90vh] md:h-auto">
-              {/* Image Gallery */}
-              <div className="relative">
-                <div className="relative aspect-square">
+  <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
+    <DialogContent className="max-w-4xl p-0 bg-white max-h-[90vh] md:max-h-[85vh] overflow-hidden">
+      <DialogTitle className="sr-only">{selectedProduct.name}</DialogTitle>
+      <div className="grid md:grid-cols-2 h-full">
+        {/* Image Gallery */}
+        <div className="relative h-[50vh] md:h-full bg-black/5">
+          {/* Main Image */}
+          <div className="relative h-[calc(100%-5rem)] w-full">
+            <img
+              src={selectedProduct.images[currentImageIndex]}
+              alt={selectedProduct.name}
+              className="w-full h-full object-contain px-4"
+            />
+            {selectedProduct.images.length > 1 && (
+              <>
+                <button
+                  onClick={handlePrevImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={handleNextImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Thumbnails */}
+          {selectedProduct.images.length > 1 && (
+            <div className="absolute bottom-0 left-0 right-0 h-20 bg-white border-t border-gray-100 p-2 flex gap-2 overflow-x-auto">
+              {selectedProduct.images.map((image, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  className={cn(
+                    "relative h-full aspect-square rounded-lg overflow-hidden flex-shrink-0 transition-all duration-300",
+                    currentImageIndex === index 
+                      ? "ring-2 ring-whatsapp-dark ring-offset-1"
+                      : "opacity-50 hover:opacity-100"
+                  )}
+                >
                   <img
-                    src={selectedProduct.images[currentImageIndex]}
-                    alt={selectedProduct.name}
+                    src={image}
+                    alt={`${selectedProduct.name} - фото ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
-                  {selectedProduct.images.length > 1 && (
-                    <>
-                      <button
-                        onClick={handlePrevImage}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
-                      >
-                        <ChevronLeft className="w-6 h-6" />
-                      </button>
-                      <button
-                        onClick={handleNextImage}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
-                      >
-                        <ChevronRight className="w-6 h-6" />
-                      </button>
-                    </>
-                  )}
-                </div>
-                {/* Thumbnails */}
-                {selectedProduct.images.length > 1 && (
-                  <div className="flex gap-2 mt-2 px-2 overflow-x-auto">
-                    {selectedProduct.images.map((image, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentImageIndex(index)}
-                        className={cn(
-                          "relative w-16 h-16 rounded-lg overflow-hidden transition-all duration-300",
-                          currentImageIndex === index 
-                            ? "ring-2 ring-whatsapp-dark ring-offset-2"
-                            : "opacity-50 hover:opacity-100"
-                        )}
-                      >
-                        <img
-                          src={image}
-                          alt={`${selectedProduct.name} - фото ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {/* Product Info */}
-              <div className="relative h-full">
-                <ScrollArea 
-                  className="h-full px-6 py-4"
-                  onScroll={handleDialogScroll}
-                  ref={dialogContentRef}
-                >
-                  <h2 className="text-2xl font-bold mb-4">{selectedProduct.name}</h2>
-                  <p className="text-xl font-bold text-whatsapp-dark mb-4">
-                    {selectedProduct.price.toLocaleString('ru-RU')} ₽
-                  </p>
-                  <p className="text-gray-600 mb-6">{selectedProduct.description}</p>
-                  
-                  {Object.entries(selectedProduct.specifications || {}).length > 0 && (
-                    <div className="mb-6">
-                      <h3 className="font-semibold mb-2">Характеристики:</h3>
-                      <dl className="grid grid-cols-2 gap-2">
-                        {Object.entries(selectedProduct.specifications).map(([key, value]) => (
-                          <React.Fragment key={key}>
-                            <dt className="text-gray-600">{key}:</dt>
-                            <dd className="font-medium">{value}</dd>
-                          </React.Fragment>
-                        ))}
-                      </dl>
-                    </div>
-                  )}
-                  
-                  <Button
-                    onClick={() => handleWhatsAppClick(selectedProduct)}
-                    className="w-full bg-whatsapp-green hover:bg-whatsapp-teal text-white py-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300"
-                  >
-                    <MessageCircle className="w-5 h-5 mr-2" />
-                    Заказать через WhatsApp
-                  </Button>
-                </ScrollArea>
-                {/* Scroll Indicator */}
-                {showScrollIndicator && !hasScrolled && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 animate-bounce">
-                    <div className="flex flex-col items-center text-gray-500">
-                      <ChevronDown className="w-6 h-6" />
-                      <span className="text-xs">Листайте вниз</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+                </button>
+              ))}
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          )}
+        </div>
+
+        {/* Product Info */}
+        <div className="flex flex-col h-[40vh] md:h-full overflow-hidden">
+          <ScrollArea className="flex-1 px-6 py-4 overflow-y-auto">
+            <div className="space-y-4 pb-20">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold">Название:</h2>
+                <p className="mt-1 text-lg">{selectedProduct.name}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-bold">Цена:</h3>
+                <span className="text-xl font-bold text-whatsapp-dark">
+                  {selectedProduct.price.toLocaleString('ru-RU')} ₽
+                </span>
+              </div>
+
+              {selectedProduct.description && (
+                <div>
+                  <h3 className="text-lg font-bold">Описание:</h3>
+                  <p className="text-gray-600">{selectedProduct.description}</p>
+                </div>
+              )}
+              
+              {Object.entries(selectedProduct.specifications || {}).length > 0 && (
+                <div>
+                  <h3 className="text-lg font-bold">Характеристики:</h3>
+                  <dl className="grid gap-2 mt-2">
+                    {Object.entries(selectedProduct.specifications).map(([key, value]) => (
+                      <div key={key} className="flex justify-between">
+                        <dt className="text-gray-600">{key}:</dt>
+                        <dd className="font-medium">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          
+          {/* Fixed WhatsApp button at bottom */}
+          <div className="sticky bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100">
+            <Button
+              onClick={() => handleWhatsAppClick(selectedProduct)}
+              className="w-full bg-whatsapp-green hover:bg-whatsapp-teal text-white py-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300"
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              Заказать через WhatsApp
+            </Button>
+          </div>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
+)}
 
       {/* Footer */}
       <footer className="bg-whatsapp-dark text-white py-6 px-6 mt-8">
         <div className="text-center max-w-md mx-auto">
-          <p className="mb-3 text-sm sm:text-base">© 2024 {settings?.site_name || 'БутикЧат'}. Все права защищены</p>
+          <p className="mb-3 text-sm sm:text-base"> 2024 {settings?.site_name || 'БутикЧат'}. Все права защищены</p>
           <p className="text-sm opacity-90 mb-3">Сделано сыном с бесконечной любовью для мамы</p>
           <a
             href="https://nepersonaj.ru"
