@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Product, Category } from '../../lib/supabase';
-import { Plus, Pencil, Trash2, X, Package, Upload } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
-import { uploadToImgBB } from '../../utils/imgbb';
+import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 
 type Specification = {
   key: string;
@@ -35,15 +31,6 @@ export function ProductManager({
     { key: '', value: '' },
   ]);
   const [editingSpecs, setEditingSpecs] = useState<Specification[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
 
   const ImageInput = ({ 
     images, 
@@ -52,303 +39,132 @@ export function ProductManager({
     images: string[], 
     onChange: (images: string[]) => void 
   }) => {
-    const [uploading, setUploading] = useState(false);
+    const addImage = () => {
+      onChange([...images, '']);
+    };
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
-      try {
-        const file = event.target.files?.[0];
-        if (!file) {
-          console.log('No file selected');
-          return;
-        }
+    const removeImage = (index: number) => {
+      const newImages = [...images];
+      newImages.splice(index, 1);
+      onChange(newImages);
+    };
 
-        console.log('Starting upload for file:', file.name, 'at index:', index);
-        setUploading(true);
-
-        const imageUrl = await uploadToImgBB(file);
-        console.log('Upload successful, got URL:', imageUrl);
-
-        const newImages = [...images];
-        newImages[index] = imageUrl;
-        onChange(newImages);
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        alert('Failed to upload image. Please check if ImgBB API key is set in settings.');
-      } finally {
-        setUploading(false);
-      }
+    const updateImage = (index: number, value: string) => {
+      const newImages = [...images];
+      newImages[index] = value;
+      onChange(newImages);
     };
 
     return (
       <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Изображения
+        </label>
         {images.map((url, index) => (
           <div key={index} className="flex gap-2">
-            <Input
-              type="text"
+            <input
+              type="url"
               value={url}
-              onChange={(e) => {
-                const newImages = [...images];
-                newImages[index] = e.target.value;
-                onChange(newImages);
-              }}
+              onChange={(e) => updateImage(index, e.target.value)}
               placeholder="URL изображения"
-              className="flex-1"
+              className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
             />
-            <label className="relative cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileUpload(e, index)}
-                className="sr-only"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="default"
-                disabled={uploading}
-                className="relative pointer-events-none"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {uploading ? 'Загрузка...' : 'Загрузить'}
-              </Button>
-            </label>
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="text-red-500 hover:text-red-600 hover:bg-red-50"
-              onClick={() => {
-                const newImages = images.filter((_, i) => i !== index);
-                onChange(newImages);
-              }}
+              onClick={() => removeImage(index)}
+              className="p-2 text-red-600 hover:text-red-800"
             >
-              <X className="h-4 w-4" />
-            </Button>
+              <X className="w-5 h-5" />
+            </button>
           </div>
         ))}
-        <Button
+        <button
           type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onChange([...images, ''])}
-          className="w-full border-dashed border-gray-300 hover:border-[var(--whatsapp-teal)] hover:text-[var(--whatsapp-teal)]"
+          onClick={addImage}
+          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
         >
-          <Plus className="h-4 w-4 mr-1" />
+          <Plus className="w-4 h-4 mr-2" />
           Добавить изображение
-        </Button>
+        </button>
       </div>
     );
   };
 
-  const SpecificationInput = ({
+  const SpecificationsInput = ({
     specs,
     onChange,
   }: {
     specs: Specification[];
     onChange: (specs: Specification[]) => void;
   }) => {
+    const addSpec = () => {
+      onChange([...specs, { key: '', value: '' }]);
+    };
+
+    const removeSpec = (index: number) => {
+      const newSpecs = [...specs];
+      newSpecs.splice(index, 1);
+      onChange(newSpecs);
+    };
+
+    const updateSpec = (index: number, field: 'key' | 'value', value: string) => {
+      const newSpecs = [...specs];
+      newSpecs[index][field] = value;
+      onChange(newSpecs);
+    };
+
     return (
       <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Характеристики
+        </label>
         {specs.map((spec, index) => (
           <div key={index} className="flex gap-2">
-            <Input
+            <input
               type="text"
               value={spec.key}
-              onChange={(e) => {
-                const newSpecs = [...specs];
-                newSpecs[index].key = e.target.value;
-                onChange(newSpecs);
-              }}
-              placeholder="Характеристика"
-              className="flex-1 bg-gray-50 border-gray-200 focus:border-[var(--whatsapp-teal)] focus:ring-[var(--whatsapp-teal)]"
+              onChange={(e) => updateSpec(index, 'key', e.target.value)}
+              placeholder="Название"
+              className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
             />
-            <Input
+            <input
               type="text"
               value={spec.value}
-              onChange={(e) => {
-                const newSpecs = [...specs];
-                newSpecs[index].value = e.target.value;
-                onChange(newSpecs);
-              }}
+              onChange={(e) => updateSpec(index, 'value', e.target.value)}
               placeholder="Значение"
-              className="flex-1 bg-gray-50 border-gray-200 focus:border-[var(--whatsapp-teal)] focus:ring-[var(--whatsapp-teal)]"
+              className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
             />
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="text-red-500 hover:text-red-600 hover:bg-red-50"
-              onClick={() => {
-                const newSpecs = specs.filter((_, i) => i !== index);
-                onChange(newSpecs);
-              }}
+              onClick={() => removeSpec(index)}
+              className="p-2 text-red-600 hover:text-red-800"
             >
-              <X className="h-4 w-4" />
-            </Button>
+              <X className="w-5 h-5" />
+            </button>
           </div>
         ))}
-        <Button
+        <button
           type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onChange([...specs, { key: '', value: '' }])}
-          className="w-full border-dashed border-gray-300 hover:border-[var(--whatsapp-teal)] hover:text-[var(--whatsapp-teal)]"
+          onClick={addSpec}
+          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
         >
-          <Plus className="h-4 w-4 mr-1" />
+          <Plus className="w-4 h-4 mr-2" />
           Добавить характеристику
-        </Button>
+        </button>
       </div>
     );
   };
 
-  const ProductForm = ({
-    product,
-    specs,
-    onSubmit,
-    onCancel,
-  }: {
-    product: typeof newProduct;
-    specs: Specification[];
-    onSubmit: (e: React.FormEvent) => void;
-    onCancel: () => void;
-  }) => (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Название товара
-          </label>
-          <Input
-            type="text"
-            value={product.name}
-            onChange={(e) =>
-              product === newProduct
-                ? setNewProduct({ ...newProduct, name: e.target.value })
-                : setEditing({ ...editing!, name: e.target.value })
-            }
-            placeholder="Введите название товара"
-            required
-            className="bg-gray-50 border-gray-200 focus:border-[var(--whatsapp-teal)] focus:ring-[var(--whatsapp-teal)]"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Категория
-          </label>
-          <select
-            value={product.category_id}
-            onChange={(e) =>
-              product === newProduct
-                ? setNewProduct({ ...newProduct, category_id: e.target.value })
-                : setEditing({ ...editing!, category_id: e.target.value })
-            }
-            className="w-full h-9 rounded-md border border-gray-200 bg-gray-50 px-3 text-sm focus:outline-none focus:border-[var(--whatsapp-teal)] focus:ring-[var(--whatsapp-teal)]"
-            required
-          >
-            <option value="">Выберите категорию</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Цена
-          </label>
-          <Input
-            type="number"
-            value={product.price}
-            onChange={(e) =>
-              product === newProduct
-                ? setNewProduct({ ...newProduct, price: Number(e.target.value) })
-                : setEditing({ ...editing!, price: Number(e.target.value) })
-            }
-            placeholder="0"
-            min="0"
-            required
-            className="bg-gray-50 border-gray-200 focus:border-[var(--whatsapp-teal)] focus:ring-[var(--whatsapp-teal)]"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Описание
-          </label>
-          <textarea
-            value={product.description}
-            onChange={(e) =>
-              product === newProduct
-                ? setNewProduct({ ...newProduct, description: e.target.value })
-                : setEditing({ ...editing!, description: e.target.value })
-            }
-            rows={2}
-            className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:border-[var(--whatsapp-teal)] focus:ring-[var(--whatsapp-teal)]"
-            placeholder="Описание товара"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-600 mb-1">
-          Изображения
-        </label>
-        <ImageInput
-          images={product.images}
-          onChange={(images) =>
-            product === newProduct
-              ? setNewProduct({ ...newProduct, images })
-              : setEditing({ ...editing!, images })
-          }
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-600 mb-1">
-          Характеристики
-        </label>
-        <SpecificationInput
-          specs={specs}
-          onChange={(newSpecs) =>
-            product === newProduct
-              ? setSpecifications(newSpecs)
-              : setEditingSpecs(newSpecs)
-          }
-        />
-      </div>
-
-      <div className="flex justify-end space-x-2 pt-4 border-t">
-        <Button 
-          type="button" 
-          onClick={onCancel} 
-          variant="ghost"
-          size="sm"
-          className="text-gray-600 hover:text-gray-800"
-        >
-          Отмена
-        </Button>
-        <Button 
-          type="submit"
-          size="sm"
-          className="bg-[var(--whatsapp-dark)] hover:bg-[var(--whatsapp-teal)] text-white"
-        >
-          {product === newProduct ? 'Добавить' : 'Сохранить'}
-        </Button>
-      </div>
-    </form>
-  );
-
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const specsObject = specifications.reduce(
-      (acc, { key, value }) => (key ? { ...acc, [key]: value } : acc),
-      {}
-    );
-
     try {
+      const specsObject = specifications.reduce((acc, spec) => {
+        if (spec.key && spec.value) {
+          acc[spec.key] = spec.value;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
       const { error } = await supabase.from('products').insert([
         {
           ...newProduct,
@@ -376,12 +192,14 @@ export function ProductManager({
 
   const handleUpdate = async (id: string) => {
     if (!editing) return;
-    const specsObject = editingSpecs.reduce(
-      (acc, { key, value }) => (key ? { ...acc, [key]: value } : acc),
-      {}
-    );
-
     try {
+      const specsObject = editingSpecs.reduce((acc, spec) => {
+        if (spec.key && spec.value) {
+          acc[spec.key] = spec.value;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
       const { error } = await supabase
         .from('products')
         .update({
@@ -401,7 +219,7 @@ export function ProductManager({
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Вы уверены, что хотите удалить этот товар?')) return;
+    if (!window.confirm('Вы уверены что хотите удалить этот товар?')) return;
     try {
       const { error } = await supabase.from('products').delete().eq('id', id);
 
@@ -413,179 +231,233 @@ export function ProductManager({
     }
   };
 
+  const startEditing = (product: Product) => {
+    setEditing(product);
+    const specs = Object.entries(product.specifications || {}).map(
+      ([key, value]) => ({ key, value })
+    );
+    setEditingSpecs(specs.length ? specs : [{ key: '', value: '' }]);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <div className="bg-[var(--whatsapp-dark)] text-white sticky top-0 z-10">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center space-x-3">
-            <Package className="h-5 w-5" />
-            <h1 className="text-lg font-medium">Управление товарами</h1>
-          </div>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-[var(--whatsapp-teal)] hover:bg-[var(--whatsapp-teal-dark)] text-white"
-            size="sm"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Товары</h2>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="inline-flex items-center px-4 py-2 rounded-lg bg-[var(--whatsapp-dark)] text-white hover:bg-[var(--whatsapp-teal)] transition-colors"
+        >
+          {showForm ? (
+            <>
+              <X className="w-5 h-5 mr-2" />
+              <span>Отмена</span>
+            </>
+          ) : (
+            <>
+              <Plus className="w-5 h-5 mr-2" />
+              <span>Добавить товар</span>
+            </>
+          )}
+        </button>
       </div>
 
-      {/* Search and Filter */}
-      <div className="p-2 bg-gray-50 border-b">
-        <div className="space-y-2">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="Поиск товаров..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 bg-white border-gray-200 focus:border-[var(--whatsapp-teal)] focus:ring-[var(--whatsapp-teal)] rounded-full"
-            />
-            <div className="absolute left-3 top-2.5 text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
+      {showForm && (
+        <form onSubmit={handleAdd} className="bg-white rounded-lg shadow p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Название
+              </label>
+              <input
+                type="text"
+                required
+                value={newProduct.name}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, name: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Категория
+              </label>
+              <select
+                required
+                value={newProduct.category_id}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, category_id: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
+              >
+                <option value="">Выберите категорию</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full h-10 rounded-full border border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[var(--whatsapp-teal)] focus:ring-1 focus:ring-[var(--whatsapp-teal)]"
-          >
-            <option value="">Все категории</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
 
-      {/* Products List */}
-      <div className="p-2">
-        <div className="space-y-2">
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white rounded-lg shadow-sm overflow-hidden"
-            >
-              {product.images && product.images[0] && (
-                <div className="aspect-[4/3] relative">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Цена
+            </label>
+            <input
+              type="number"
+              required
+              min="0"
+              value={newProduct.price}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, price: Number(e.target.value) })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Описание
+            </label>
+            <textarea
+              required
+              value={newProduct.description}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, description: e.target.value })
+              }
+              rows={3}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
+            />
+          </div>
+
+          <ImageInput
+            images={newProduct.images}
+            onChange={(images) => setNewProduct({ ...newProduct, images })}
+          />
+
+          <SpecificationsInput
+            specs={specifications}
+            onChange={setSpecifications}
+          />
+
+          <button
+            type="submit"
+            className="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[var(--whatsapp-dark)] hover:bg-[var(--whatsapp-teal)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--whatsapp-dark)]"
+          >
+            Добавить товар
+          </button>
+        </form>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {products.map((product) => (
+          <div key={product.id} className="bg-white rounded-lg shadow overflow-hidden">
+            {editing?.id === product.id ? (
+              <div className="p-4 space-y-4">
+                <input
+                  type="text"
+                  value={editing.name}
+                  onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
+                />
+                <select
+                  value={editing.category_id}
+                  onChange={(e) =>
+                    setEditing({ ...editing, category_id: e.target.value })
+                  }
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
+                >
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min="0"
+                  value={editing.price}
+                  onChange={(e) =>
+                    setEditing({ ...editing, price: Number(e.target.value) })
+                  }
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
+                />
+                <textarea
+                  value={editing.description}
+                  onChange={(e) =>
+                    setEditing({ ...editing, description: e.target.value })
+                  }
+                  rows={3}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-dark)] focus:ring-[var(--whatsapp-dark)] sm:text-sm"
+                />
+                <ImageInput
+                  images={editing.images}
+                  onChange={(images) => setEditing({ ...editing, images })}
+                />
+                <SpecificationsInput
+                  specs={editingSpecs}
+                  onChange={setEditingSpecs}
+                />
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleUpdate(product.id)}
+                    className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-[var(--whatsapp-dark)] hover:bg-[var(--whatsapp-teal)]"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Сохранить
+                  </button>
+                  <button
+                    onClick={() => setEditing(null)}
+                    className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4">
+                <div className="aspect-w-16 aspect-h-9">
                   <img
                     src={product.images[0]}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-48 object-cover"
                   />
                 </div>
-              )}
-              <div className="p-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-medium text-gray-900">{product.name}</h3>
-                    <p className="text-[var(--whatsapp-teal)] font-medium mt-0.5">
-                      {product.price.toLocaleString()} ₽
-                    </p>
-                  </div>
-                  <div className="flex space-x-1">
-                    <Button
-                      onClick={() => {
-                        setEditing(product);
-                        setEditingSpecs(
-                          Object.entries(product.specifications || {}).map(
-                            ([key, value]) => ({ key, value })
-                          )
-                        );
-                      }}
-                      variant="ghost"
-                      size="sm"
-                      className="text-gray-600 hover:text-[var(--whatsapp-teal)]"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      onClick={() => handleDelete(product.id)}
-                      variant="ghost"
-                      size="sm"
-                      className="text-gray-600 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                {product.description && (
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-                    {product.description}
-                  </p>
-                )}
-                <div className="mt-2 flex items-center text-xs text-gray-500">
-                  <Package className="h-3.5 w-3.5 mr-1" />
-                  {categories.find((c) => c.id === product.category_id)?.name || 'Без категории'}
+                <h3 className="mt-4 text-lg font-medium text-gray-900">
+                  {product.name}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {categories.find((c) => c.id === product.category_id)?.name}
+                </p>
+                <p className="mt-1 text-lg font-bold text-[var(--whatsapp-dark)]">
+                  {product.price.toLocaleString('ru-RU')} ₽
+                </p>
+                <p className="mt-2 text-sm text-gray-500 line-clamp-2">
+                  {product.description}
+                </p>
+                <div className="mt-4 flex justify-between">
+                  <button
+                    onClick={() => startEditing(product)}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Изменить
+                  </button>
+                  <button
+                    onClick={() => handleDelete(product.id)}
+                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Удалить
+                  </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredProducts.length === 0 && (
-          <div className="bg-white rounded-lg p-8 text-center mt-4">
-            <div className="text-gray-400 mb-3">
-              <Package className="h-12 w-12 mx-auto" />
-            </div>
-            <h3 className="text-base font-medium text-gray-900 mb-1">Товары не найдены</h3>
-            <p className="text-sm text-gray-500">
-              {searchTerm
-                ? 'Попробуйте изменить параметры поиска'
-                : 'Добавьте первый товар, нажав кнопку "+"'}
-            </p>
+            )}
           </div>
-        )}
+        ))}
       </div>
-
-      {/* Add Product Dialog */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-md bg-white p-0 max-h-[95vh] flex flex-col mx-2">
-          <div className="bg-[var(--whatsapp-dark)] text-white px-4 py-3 flex items-center justify-between">
-            <DialogTitle className="text-base font-medium">
-              Добавить товар
-            </DialogTitle>
-          </div>
-          <div className="overflow-y-auto flex-1 p-4">
-            <ProductForm
-              product={newProduct}
-              specs={specifications}
-              onSubmit={handleAdd}
-              onCancel={() => setShowForm(false)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Product Dialog */}
-      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-w-md bg-white p-0 max-h-[95vh] flex flex-col mx-2">
-          <div className="bg-[var(--whatsapp-dark)] text-white px-4 py-3 flex items-center justify-between">
-            <DialogTitle className="text-base font-medium">
-              Редактировать товар
-            </DialogTitle>
-          </div>
-          {editing && (
-            <div className="overflow-y-auto flex-1 p-4">
-              <ProductForm
-                product={editing}
-                specs={editingSpecs}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleUpdate(editing.id);
-                }}
-                onCancel={() => setEditing(null)}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

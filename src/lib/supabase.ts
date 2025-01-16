@@ -9,16 +9,7 @@ if (!supabaseUrl || !supabaseKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-export interface Category {
-  id: string;
-  name: string;
-  description: string;
-  image_url: string;
-  display_order: number;
-  created_at: string;
-}
-
-export interface Product {
+export type Product = {
   id: string;
   category_id: string;
   name: string;
@@ -27,13 +18,18 @@ export interface Product {
   description: string;
   specifications: Record<string, string>;
   created_at: string;
-}
+};
 
-export interface Settings {
+export type Category = {
+  id: string;
+  name: string;
+  image_url: string;
+  display_order: number;
+};
+
+export type Settings = {
   id: string;
   site_name: string;
   whatsapp_number: string;
   privacy_policy: string;
-  imgbb_api_key: string;
-  created_at: string;
-}
+};

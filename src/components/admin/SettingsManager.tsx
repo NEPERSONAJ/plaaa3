@@ -14,7 +14,6 @@ export function SettingsManager({
     site_name: '',
     whatsapp_number: '',
     privacy_policy: '',
-    imgbb_api_key: '',
   })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{
@@ -28,7 +27,6 @@ export function SettingsManager({
         site_name: settings.site_name,
         whatsapp_number: settings.whatsapp_number,
         privacy_policy: settings.privacy_policy,
-        imgbb_api_key: settings.imgbb_api_key || '',
       })
     }
   }, [settings])
@@ -131,30 +129,6 @@ export function SettingsManager({
           </div>
           <p className="mt-1 text-sm text-gray-500">
             Введите номер в формате: 7XXXXXXXXXX (без +)
-          </p>
-        </div>
-
-        <div>
-          <label
-            htmlFor="imgbb_api_key"
-            className="block text-sm font-medium text-gray-700"
-          >
-            ImgBB API Key
-          </label>
-          <input
-            type="text"
-            id="imgbb_api_key"
-            value={formData.imgbb_api_key || ''}
-            onChange={(e) =>
-              setFormData({ ...formData, imgbb_api_key: e.target.value })
-            }
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[var(--whatsapp-teal)] focus:ring-[var(--whatsapp-teal)] sm:text-sm"
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            API ключ для загрузки изображений на ImgBB. Получить можно на сайте{' '}
-            <a href="https://api.imgbb.com/" target="_blank" rel="noopener noreferrer" className="text-[var(--whatsapp-teal)]">
-              api.imgbb.com
-            </a>
           </p>
         </div>
 
