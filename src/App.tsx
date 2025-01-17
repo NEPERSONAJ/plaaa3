@@ -4,7 +4,7 @@ import { cn } from './lib/utils';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { ScrollArea } from './components/ui/scroll-area';
-import { Dialog, DialogContent } from './components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from './components/ui/dialog';
 import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet';
 import { supabase } from './lib/supabase';
 import type { Category, Product, Settings } from './lib/supabase';
@@ -345,6 +345,7 @@ ${settings.site_name}
       {selectedProduct && (
   <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
     <DialogContent className="max-w-4xl p-0 bg-white max-h-[90vh] md:max-h-[85vh] overflow-hidden">
+      <DialogTitle className="sr-only">{selectedProduct.name}</DialogTitle>
       <div className="grid md:grid-cols-2 h-full">
         {/* Image Gallery */}
         <div className="relative h-[50vh] md:h-full bg-black/5">
@@ -456,7 +457,7 @@ ${settings.site_name}
       {/* Footer */}
       <footer className="bg-whatsapp-dark text-white py-6 px-6 mt-8">
         <div className="text-center max-w-md mx-auto">
-          <p className="mb-3 text-sm sm:text-base">© 2024 {settings?.site_name || 'БутикЧат'}. Все права защищены</p>
+          <p className="mb-3 text-sm sm:text-base"> 2024 {settings?.site_name || 'БутикЧат'}. Все права защищены</p>
           <p className="text-sm opacity-90 mb-3">Сделано сыном с бесконечной любовью для мамы</p>
           <a
             href="https://nepersonaj.ru"
